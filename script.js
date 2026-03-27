@@ -1,30 +1,46 @@
-document.getElementById('addBtn').addEventListener('click', function() {
-    const taskInput = document.getElementById('taskInput');
-    const taskText = taskInput.value;
+// Modern Task Manager Script - Refactored for readability and best practices
+// Uses arrow functions, cached DOM elements, explicit createElement (no innerHTML)
+// Timestamp experiment: Adds "(added at HH:MM)" to each task using Date & template literals
 
-    if (taskText === '') {
-        alert("Please enter a task!");
-        return;
-    }
+const taskInput = document.getElementById('taskInput');
+const addBtn = document.getElementById('addBtn');
+const clearBtn = document.getElementById('clearBtn');
+const taskList = document.getElementById('taskList');
 
-    const taskList = document.getElementById('taskList');
-    const li = document.createElement('li');
-    li.className = 'task-item';
-    
-    li.innerHTML = `
-        <span>${taskText}</span>
-        <button class="delete-btn">Delete</button>
-    `;
+// Add Task Handler
+addBtn.addEventListener('click', () => {
+  const taskText = taskInput.value.trim();
 
-    taskList.appendChild(li);
-    taskInput.value = ''; // Clear input
+  if (taskText === '') {
+    alert('Please enter a task!');
+    return;
+  }
 
-    // delete functionality
-    li.querySelector('.delete-btn').addEventListener('click', function() {
-        li.remove();
-    });
+  // Create timestamp
+  const now = new Date();
+  const timestamp = now.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', second: '2-digit'});
+
+  // Create task item explicitly with createElement
+  const li = document.createElement('li');
+  li.className = 'task-item';
+
+  const span = document.createElement('span');
+  span.textContent = `${taskText} (added at ${timestamp})`;
+  li.appendChild(span);
+
+  const deleteBtn = document.createElement('button');
+  deleteBtn.className = 'delete-btn';
+  deleteBtn.textContent = 'Delete';
+  li.appendChild(deleteBtn);
+
+  taskList.appendChild(li);
+  taskInput.value = '';
+
+  // Delete handler for this task
+  deleteBtn.addEventListener('click', () => li.remove());
 });
 
-document.getElementById('clearBtn').addEventListener('click', function() {
-    document.getElementById('taskList').innerHTML = '';
+// Clear All Handler
+clearBtn.addEventListener('click', () => {
+  taskList.innerHTML = '';
 });
