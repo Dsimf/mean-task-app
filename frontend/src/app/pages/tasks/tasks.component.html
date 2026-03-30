@@ -1,0 +1,66 @@
+<div class="container mx-auto sm:p-4 md:p-8">
+  <header class="transition-all duration-300">
+    <h1>TaskFlow</h1>
+    <p>Stay organized • Get things done</p>
+  </header>
+
+  <form [formGroup]="taskForm" (ngSubmit)="addTask()" class="add-task-section">
+    <div class="add-task transition-all duration-200">
+      <input
+        type="text"
+        formControlName="taskInput"
+        placeholder="What needs to be done?"
+        class="task-input transition-all duration-300"
+        [class.input-error]="hasError('taskInput', 'required') || hasError('taskInput', 'minlength') || hasError('taskInput', 'maxlength')"
+        (keyup.enter)="addTask()">
+      <button type="submit" class="add-btn transition-all duration-300 hover:scale-105">Add Task</button>
+    </div>
+
+    <div *ngIf="showValidationErrors() && taskInput?.invalid" class="validation-errors animate-in fade-in">
+      <p *ngIf="hasError('taskInput', 'required')" class="error-message">⚠️ {{ getErrorMessage('taskInput') }}</p>
+      <p *ngIf="hasError('taskInput', 'minlength')" class="error-message">⚠️ {{ getErrorMessage('taskInput') }}</p>
+      <p *ngIf="hasError('taskInput', 'maxlength')" class="error-message">⚠️ {{ getErrorMessage('taskInput') }}</p>
+    </div>
+
+    <div class="char-counter">{{ taskInput?.value?.length || 0 }}/200 characters</div>
+  </form>
+
+  <div class="filters transition-all duration-300">
+    <button class="filter-btn transition-all duration-200 hover:scale-105" [class.active]="taskService.filter() === 'all'" (click)="setFilter('all')">
+      All <span class="count">{{ taskService.taskList().length }}</span>
+    </button>
+    <button class="filter-btn transition-all duration-200 hover:scale-105" [class.active]="taskService.filter() === 'active'" (click)="setFilter('active')">
+      Active <span class="count">{{ taskService.filteredTasks().filter(t => !t.completed).length }}</span>
+    </button>
+    <button class="filter-btn transition-all duration-200 hover:scale-105" [class.active]="taskService.filter() === 'completed'" (click)="setFilter('completed')">
+      Completed <span class="count">{{ taskService.filteredTasks().filter(t => t.completed).length }}</span>
+    </button>
+  </div>
+
+  <ul id="taskList" class="task-list">
+    <li *ngIf="taskService.filteredTasks().length === 0" class="empty-state animate-in fade-in">
+      <p>✨ No tasks yet. Add one to get started! ✨</p>
+    </li>
+
+    <li *ngFor="let task of taskService.filteredTasks(); let i = index" class="task-item transition-all duration-300 hover:scale-102 group" [class.completed]="task.completed" [class.priority-low]="task.priority === 'low'" [class.priority-med]="task.priority === 'med'" [class.priority-high]="task.priority === 'high'" [attr.data-priority]="task.priority" [style.animation-delay.ms]="i * 100">
+      <input type="checkbox" [checked]="task.completed" (change)="toggleComplete(task.id)" class="cb transition-all" />
+      <span class="task-text transition-all">{{ task.text }}</span>
+      <span class="priority-badge transition-all">{{ task.priority }}</span>
+      <button class="delete-btn transition-all duration-300 group-hover:scale-110" (click)="deleteTask(task.id)">×</button>
+    </li>
+  </ul>
+
+  <div class="footer transition-all duration-300 sm:flex-row md:flex-wrap">
+    <span [class.high]="taskService.taskList().length > 10" id="taskCount" class="transition-all">
+      {{ taskService.taskList().length }} tasks
+    </span>
+    <div class="flex gap-2 flex-wrap md:flex-nowrap">
+      <button id="clearCompleted" *ngIf="taskService.filteredTasks().some(t => t.completed)" class="transition-all duration-200 hover:scale-105" (click)="clearCompleted()">
+        Clear completed
+      </button>
+      <button id="darkToggle" class="transition-all duration-200 hover:scale-105" (click)="toggleDarkMode()">
+        {{ themeService.darkMode() ? '☀️ Light Mode' : '🌙 Dark Mode' }}
+      </button>
+    </div>
+  </div>
+</div>

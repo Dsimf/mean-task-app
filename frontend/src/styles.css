@@ -1,0 +1,110 @@
+/* You can add global styles to this file, and also import other style files */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --bg-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --bg-secondary: linear-gradient(135deg, #00c6ff 0%, #0072ff 100%);
+  --glass-bg: rgba(255, 255, 255, 0.25);
+  --glass-border: rgba(255, 255, 255, 0.18);
+  --shadow-lg: 0 25px 45px rgba(0, 0, 0, 0.1);
+  --text-primary: #2c3e50;
+  --text-secondary: #7f8c8d;
+  --accent-blue: #3498db;
+  --accent-green: #27ae60;
+  --accent-orange: #f39c12;
+  --accent-red: #e74c3c;
+  --priority-low: #27ae60;
+  --priority-med: #f39c12;
+  --priority-high: #e74c3c;
+}
+
+body.dark-mode {
+  --bg-primary: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  --bg-secondary: linear-gradient(135deg, #0f3460 0%, #1b1b2b 100%);
+  --glass-bg: rgba(0, 0, 0, 0.4);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --shadow-lg: 0 25px 45px rgba(0, 0, 0, 0.3);
+  --text-primary: #ecf0f1;
+  --text-secondary: #bdc3c7;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #1f005c 0%, #5b3b9f 45%, #2adfff 100%);
+  min-height: 100vh;
+  padding: 40px 20px;
+  transition: all 0.3s ease;
+  color: #f4f4f9;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at top left, rgba(255,255,255,0.25), transparent 45%), radial-gradient(circle at bottom right, rgba(255,255,255,0.18), transparent 40%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* final fallback global theme: enforce modern look in case component css patch fails */
+.app-shell, .container {
+  background: rgba(255,255,255,0.2) !important;
+  border: 1px solid rgba(255,255,255,0.35) !important;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.25) !important;
+  backdrop-filter: blur(15px) !important;
+}
+
+body {
+  background: linear-gradient(135deg, #171b33, #1e90ff) !important;
+}
+
+/* Global container + glass card style */
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 1.5rem;
+  backdrop-filter: blur(18px);
+  box-shadow: 0 25px 45px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+/* Optional: keep some polished heading style from previous theme */
+header {
+  background: linear-gradient(90deg, #4f46e5, #8b5cf6);
+  color: #ffffff;
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+header h1 {
+  font-size: 2.75rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+header p {
+  margin-top: 0.4rem;
+  color: #f0f4ff;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/* ============================================= */
+/* Tailwind CSS - utility layer for polish      */
+/* ============================================= */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
