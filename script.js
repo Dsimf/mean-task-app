@@ -1,46 +1,162 @@
-// Modern Task Manager Script - Refactored for readability and best practices
-// Uses arrow functions, cached DOM elements, explicit createElement (no innerHTML)
-// Timestamp experiment: Adds "(added at HH:MM)" to each task using Date & template literals
+// ==================== Enhanced TaskFlow with Dark Mode & Priorities ====================
 
 const taskInput = document.getElementById('taskInput');
 const addBtn = document.getElementById('addBtn');
-const clearBtn = document.getElementById('clearBtn');
 const taskList = document.getElementById('taskList');
+const taskCount = document.getElementById('taskCount');
+const filterBtns = document.querySelectorAll('.filter-btn');
+const clearCompletedBtn = document.getElementById('clearCompleted');
 
-// Add Task Handler
-addBtn.addEventListener('click', () => {
-  const taskText = taskInput.value.trim();
+let tasks = [];
+let currentFilter = 'all';
 
-  if (taskText === '') {
-    alert('Please enter a task!');
-    return;
+// Dark mode support
+const body = document.body;
+const darkToggle = document.createElement('button');
+darkToggle.id = 'darkToggle';
+darkToggle.textContent = '🌙 Dark Mode';
+darkToggle.className = 'dark-toggle-btn';
+
+const toggleDarkMode = () => {
+  body.classList.toggle('dark-mode');
+  const isDark = body.classList.contains('dark-mode');
+  darkToggle.textContent = isDark ? '☀️ Light Mode' : '🌙 Dark Mode';
+  localStorage.setItem('darkMode', isDark);
+};
+
+const initDarkMode = () => {
+  const savedDarkMode = localStorage.getItem('darkMode') === 'true';
+  if (savedDarkMode) {
+    toggleDarkMode();
   }
+  document.querySelector('.footer').appendChild(darkToggle);
+  darkToggle.addEventListener('click', toggleDarkMode);
+};
 
-  // Create timestamp
-  const now = new Date();
-  const timestamp = now.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', second: '2-digit'});
+// Priority assignment based on text length
+const getPriority = (text) => {
+  const length = text.length;
+  if (length < 30) return 'low';
+  if (length < 60) return 'med';
+  return 'high';
+};
 
-  // Create task item explicitly with createElement
-  const li = document.createElement('li');
-  li.className = 'task-item';
+// Modern: Load tasks from localStorage (or mock API)
+const loadTasks = async () => {
+  try {
+    const response = await fetch('https://jsonplaceholder.typicode.com/todos?_limit=5');
+    const fakeApiTasks = await response.json();
 
-  const span = document.createElement('span');
-  span.textContent = `${taskText} (added at ${timestamp})`;
-  li.appendChild(span);
+    const apiTasks = fakeApiTasks.map(todo => ({
+      id: Date.now() + todo.id,
+      text: todo.title,
+      completed: todo.completed,
+      priority: getPriority(todo.title)
+    }));
 
-  const deleteBtn = document.createElement('button');
-  deleteBtn.className = 'delete-btn';
-  deleteBtn.textContent = 'Delete';
-  li.appendChild(deleteBtn);
+    tasks = JSON.parse(localStorage.getItem('tasks')) || apiTasks;
+    console.log('%c✅ Tasks loaded from "API" + localStorage', 'color: #3498db; font-weight: bold');
+  } catch (error) {
+    console.error('API failed, using localStorage only');
+    tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+  }
+  renderTasks();
+};
 
-  taskList.appendChild(li);
+// Save to localStorage
+const saveTasks = () => {
+  localStorage.setItem('tasks', JSON.stringify(tasks));
+};
+
+// Add task
+const addTask = () => {
+  const text = taskInput.value.trim();
+  if (!text) return;
+
+  const newTask = {
+    id: Date.now(),
+    text,
+    completed: false,
+    priority: getPriority(text)
+  };
+
+  tasks = [...tasks, newTask];
   taskInput.value = '';
+  saveTasks();
+  renderTasks();
+};
 
-  // Delete handler for this task
-  deleteBtn.addEventListener('click', () => li.remove());
-});
-
-// Clear All Handler
-clearBtn.addEventListener('click', () => {
+// Render tasks
+const renderTasks = () => {
   taskList.innerHTML = '';
+
+  const filteredTasks = tasks.filter(task => {
+    if (currentFilter === 'active') return !task.completed;
+    if (currentFilter === 'completed') return task.completed;
+    return true;
+  });
+
+  filteredTasks.forEach((task, index) => {
+    const li = document.createElement('li');
+    li.className = `task-item ${task.completed ? 'completed' : ''} priority-${task.priority}`;
+    li.setAttribute('data-priority', task.priority);
+    li.style.animationDelay = `${index * 0.1}s`;
+    li.innerHTML = `
+      <input type="checkbox" ${task.completed ? 'checked' : ''}>
+      <span>${task.text}</span>
+      <button class="delete-btn">×</button>
+    `;
+
+    li.querySelector('input').addEventListener('change', () => {
+      task.completed = !task.completed;
+      saveTasks();
+      renderTasks();
+    });
+
+    li.querySelector('.delete-btn').addEventListener('click', () => {
+      tasks = tasks.filter(t => t.id !== task.id);
+      saveTasks();
+      renderTasks();
+    });
+
+    taskList.appendChild(li);
+  });
+
+  updateTaskCount();
+};
+
+// Update task count with color logic
+const updateTaskCount = () => {
+  taskCount.textContent = `${tasks.length} tasks`;
+  taskCount.classList.remove('high');
+  if (tasks.length > 10) {
+    taskCount.classList.add('high');
+  }
+};
+
+// Filter buttons
+filterBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    filterBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter = btn.dataset.filter;
+    renderTasks();
+  });
 });
+
+// Clear completed
+clearCompletedBtn.addEventListener('click', () => {
+  tasks = tasks.filter(task => !task.completed);
+  saveTasks();
+  renderTasks();
+});
+
+// Event listeners
+addBtn.addEventListener('click', addTask);
+taskInput.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') addTask();
+});
+
+// ==================== Initialize App ====================
+initDarkMode();
+loadTasks();
