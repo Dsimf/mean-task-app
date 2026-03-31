@@ -1,87 +1,86 @@
-// ==================== Day 9-10: Express + REST API (Full CRUD) ====================
+// ==================== Day 13-14: Full Production-Ready REST API ====================
 
 const express = require('express');
 const cors = require('cors');
+const mongoose = require('mongoose');
 require('dotenv').config();
+
+const Task = require('./models/Task');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(cors());                    // Allows Angular frontend to connect
-app.use(express.json());            // Parses JSON request bodies
+app.use(cors({
+  origin: ['http://localhost:4200', 'https://Dsimf.github.io'], // Angular dev + GitHub Pages
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type']
+}));
+app.use(express.json());
 
-// In-memory tasks (MongoDB comes on Day 12)
-let tasks = [
-  { id: 1, text: "Learn Express routing", completed: true },
-  { id: 2, text: "Build full CRUD API", completed: false },
-  { id: 3, text: "Connect to Angular on Day 15", completed: false }
-];
+// MongoDB Connection
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => console.log('✅ MongoDB Atlas Connected'))
+  .catch(err => console.error('❌ MongoDB Error:', err.message));
 
 // GET all tasks
-app.get('/api/tasks', (req, res) => {
-  res.json(tasks);
-  console.log(`✅ GET /api/tasks → ${tasks.length} tasks returned`);
+app.get('/api/tasks', async (req, res) => {
+  try {
+    const tasks = await Task.find().sort({ createdAt: -1 });
+    res.json(tasks);
+  } catch (err) {
+    res.status(500).json({ error: 'Server error while fetching tasks' });
+  }
 });
 
 // POST new task
-app.post('/api/tasks', (req, res) => {
-  const { text } = req.body;
+app.post('/api/tasks', async (req, res) => {
+  try {
+    const { text } = req.body;
+    if (!text || text.trim() === '') {
+      return res.status(400).json({ error: 'Task text is required' });
+    }
 
-  if (!text || text.trim() === '') {
-    return res.status(400).json({ error: 'Task text is required' });
+    const newTask = new Task({ text: text.trim() });
+    await newTask.save();
+    res.status(201).json(newTask);
+  } catch (err) {
+    res.status(500).json({ error: 'Server error while creating task' });
   }
-
-  const newTask = {
-    id: Date.now(),
-    text: text.trim(),
-    completed: false
-  };
-
-  tasks.push(newTask);
-  res.status(201).json(newTask);
-  console.log('✅ POST /api/tasks → Task created');
 });
 
 // PUT toggle complete
-app.put('/api/tasks/:id', (req, res) => {
-  const { id } = req.params;
-  const task = tasks.find(t => t.id === parseInt(id));
+app.put('/api/tasks/:id', async (req, res) => {
+  try {
+    const task = await Task.findById(req.params.id);
+    if (!task) return res.status(404).json({ error: 'Task not found' });
 
-  if (!task) {
-    return res.status(404).json({ error: 'Task not found' });
+    task.completed = !task.completed;
+    await task.save();
+    res.json(task);
+  } catch (err) {
+    res.status(500).json({ error: 'Server error while updating task' });
   }
-
-  task.completed = !task.completed;
-  res.json(task);
-  console.log(`✅ PUT /api/tasks/${id} → toggled`);
 });
 
 // DELETE task
-app.delete('/api/tasks/:id', (req, res) => {
-  const { id } = req.params;
-  const initialLength = tasks.length;
+app.delete('/api/tasks/:id', async (req, res) => {
+  try {
+    const task = await Task.findByIdAndDelete(req.params.id);
+    if (!task) return res.status(404).json({ error: 'Task not found' });
 
-  tasks = tasks.filter(t => t.id !== parseInt(id));
-
-  if (tasks.length === initialLength) {
-    return res.status(404).json({ error: 'Task not found' });
+    res.json({ message: 'Task deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error while deleting task' });
   }
-
-  res.json({ message: 'Task deleted successfully' });
-  console.log(`✅ DELETE /api/tasks/${id} → removed`);
 });
 
-// Test route
+// Health check
 app.get('/', (req, res) => {
-  res.send('🚀 TaskFlow Backend is LIVE! <br><br>Try <a href="/api/tasks">/api/tasks</a>');
+  res.send('🚀 TaskFlow Backend is LIVE and connected to MongoDB!');
 });
 
 app.listen(PORT, () => {
   console.log(`\n🚀 Express server running at http://localhost:${PORT}`);
-  console.log('📡 Test these routes:');
-  console.log('   GET    → http://localhost:3000/api/tasks');
-  console.log('   POST   → http://localhost:3000/api/tasks');
-  console.log('   PUT    → http://localhost:3000/api/tasks/:id');
-  console.log('   DELETE → http://localhost:3000/api/tasks/:id');
+  console.log('📡 Full CRUD API ready for Angular!');
 });
