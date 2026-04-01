@@ -1,7 +1,7 @@
 import { Component, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { TaskService, ThemeService } from '../../services';
+import { TaskService, ThemeService, Task } from '../../services';
 
 /**
  * TasksPage Component
@@ -16,11 +16,14 @@ import { TaskService, ThemeService } from '../../services';
   styleUrls: ['./tasks.component.css']
 })
 export class TasksComponent implements OnInit {
-  trackByFn(index: number, task: any): number {
-    return task.id;
+  trackByFn(index: number, task: any): string | number {
+    return task._id || task.id;
   }
   taskForm!: FormGroup;
   showValidationErrors = signal(false);
+
+  tasks: Task[] = [];
+  currentFilter: 'all' | 'active' | 'completed' = 'all';
 
   constructor(
     public taskService: TaskService,
@@ -31,7 +34,19 @@ export class TasksComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // Services initialize themselves
+    this.loadTasks();
+  }
+
+  loadTasks(): void {
+    this.taskService.getTasks().subscribe({
+      next: (tasks) => {
+        this.tasks = tasks;
+      },
+      error: (err) => {
+        console.error('Failed to load tasks from backend', err);
+        alert('Could not connect to backend. Is the Node server running?');
+      }
+    });
   }
 
   /**
@@ -61,9 +76,14 @@ export class TasksComponent implements OnInit {
     }
 
     const taskText = this.taskForm.get('taskInput')?.value;
-    this.taskService.addTask(taskText);
-    this.taskForm.reset();
-    this.showValidationErrors.set(false);
+    this.taskService.addTask(taskText).subscribe({
+      next: (newTask) => {
+        this.tasks.unshift(newTask);
+        this.taskForm.reset();
+        this.showValidationErrors.set(false);
+      },
+      error: (err) => console.error('Error adding task', err)
+    });
   }
 
   /**
@@ -95,21 +115,65 @@ export class TasksComponent implements OnInit {
     return '';
   }
 
-  // Event handlers (delegated to services)
-  toggleComplete(taskId: number): void {
-    this.taskService.toggleTask(taskId);
+  // Event handlers
+  toggleComplete(task: Task): void {
+    const id = task._id || task.id;
+    if (!id) return;
+
+    this.taskService.toggleComplete(String(id)).subscribe({
+      next: (updatedTask) => {
+        const index = this.tasks.findIndex(t => (t._id || t.id) === id);
+        if (index !== -1) this.tasks[index] = updatedTask;
+      },
+      error: (err) => console.error('Error toggling task', err)
+    });
   }
 
-  deleteTask(taskId: number): void {
-    this.taskService.deleteTask(taskId);
+  deleteTask(task: Task): void {
+    const id = task._id || task.id;
+    if (!id) return;
+
+    this.taskService.deleteTask(String(id)).subscribe({
+      next: () => {
+        this.tasks = this.tasks.filter(t => (t._id || t.id) !== id);
+      },
+      error: (err) => console.error('Error deleting task', err)
+    });
   }
 
   setFilter(filter: 'all' | 'active' | 'completed'): void {
-    this.taskService.setFilter(filter);
+    this.currentFilter = filter;
+  }
+
+  filteredTasks(): Task[] {
+    return this.tasks.filter(task => {
+      if (this.currentFilter === 'active') return !task.completed;
+      if (this.currentFilter === 'completed') return task.completed;
+      return true;
+    });
+  }
+
+  getCompletedCount(): number {
+    return this.tasks.filter(task => task.completed).length;
   }
 
   clearCompleted(): void {
-    this.taskService.clearCompleted();
+    const completedCount = this.getCompletedCount();
+    if (completedCount === 0) return;
+
+    // Optimistic update
+    const originalTasks = [...this.tasks];
+    this.tasks = this.tasks.filter(task => !task.completed);
+
+    this.taskService.clearCompleted().subscribe({
+      next: (result) => {
+        console.log('Completed tasks cleared:', result);
+      },
+      error: (error) => {
+        console.error('Error clearing completed tasks:', error);
+        this.tasks = originalTasks;
+      }
+    });
   }
 
   toggleDarkMode(): void {

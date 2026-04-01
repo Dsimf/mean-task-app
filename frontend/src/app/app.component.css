@@ -388,6 +388,25 @@ header h1 {
   padding: 10px 20px;
 }
 
+.clear-completed-btn {
+  padding: 10px 20px;
+  background: linear-gradient(45deg, var(--accent-red), #c0392b);
+  color: white;
+  border: none;
+  border-radius: 20px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+  box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
+}
+
+.clear-completed-btn:hover {
+  background: linear-gradient(45deg, #c0392b, #a93226);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(231, 76, 60, 0.4);
+}
+
 /* Responsive */
 @media (max-width: 600px) {
   .filters {
@@ -413,5 +432,36 @@ header h1 {
 /* Custom scrollbar for webkit */
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255,255,255,0.5);
+}
+
+/* Modal Styles */
+.animate-fadeInUp {
+  animation: fadeInUp 0.4s ease-out;
+}
+
+/* Search Input Styles */
+.search-input {
+  background: var(--glass-bg);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  font-size: 1rem;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.search-input::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.8;
+}
+
+.search-input:focus {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2), 0 8px 32px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
 }
 

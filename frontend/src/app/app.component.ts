@@ -26,6 +26,10 @@ export class AppComponent implements OnInit {
   searchQuery = '';
   confirmDeleteTask: Task | null = null; // For confirmation dialog
   successMessage: string | null = null;
+  
+  // Cached counts for performance
+  private activeCount = 0;
+  private completedCount = 0;
 
   constructor() {
     this.taskForm = this.fb.group({
@@ -80,16 +84,25 @@ export class AppComponent implements OnInit {
     const id = task._id || task.id;
     if (!id) return;
 
+    // Optimistic update: immediately update UI
+    const originalCompleted = task.completed;
+    task.completed = !task.completed;
+    this.updateFilteredTasks();
+
+    // Then make the API call (without success message for better performance)
     this.taskService.toggleComplete(String(id)).subscribe({
       next: (updatedTask) => {
+        // API call succeeded, update with server response
         const index = this.tasks.findIndex(t => (t._id || t.id) === id);
         if (index !== -1) {
           this.tasks[index] = updatedTask;
           this.updateFilteredTasks();
-          this.showSuccess(`Task marked as ${updatedTask.completed ? 'completed' : 'incomplete'}`);
         }
       },
       error: (err) => {
+        // API call failed, revert the optimistic update
+        task.completed = originalCompleted;
+        this.updateFilteredTasks();
         this.errorMessage = 'Error toggling task: ' + err.message;
         console.error('Error toggling task', err);
       }
@@ -146,6 +159,14 @@ export class AppComponent implements OnInit {
     // Then apply search filter
     filtered = this.taskService.searchTasks(filtered, this.searchQuery);
     this.filteredTasksList = filtered;
+    
+    // Update cached counts for performance
+    this.updateCounts();
+  }
+
+  private updateCounts() {
+    this.activeCount = this.tasks.filter(t => !t.completed).length;
+    this.completedCount = this.tasks.filter(t => t.completed).length;
   }
 
   get filteredTasks(): Task[] {
@@ -172,24 +193,23 @@ export class AppComponent implements OnInit {
 
   // Helper methods for template
   getActiveCount(): number {
-    return this.tasks.filter(t => !t.completed).length;
+    return this.activeCount;
   }
 
   getCompletedCount(): number {
-    return this.tasks.filter(t => t.completed).length;
+    return this.completedCount;
   }
 
   // Clear all completed tasks
   clearCompleted(): void {
-    const completedCount = this.getCompletedCount();
+    const completedCount = this.completedCount;
     if (completedCount === 0) return;
 
-    // Optimistic update: immediately remove completed tasks from UI
+    // Optimistic update: remove completed tasks immediately
     const originalTasks = [...this.tasks];
     this.tasks = this.tasks.filter(task => !task.completed);
     this.updateFilteredTasks();
 
-    // Then make the API call
     this.taskService.clearCompleted().subscribe({
       next: (result) => {
         console.log('Completed tasks cleared:', result);
@@ -197,12 +217,12 @@ export class AppComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error clearing completed tasks:', error);
-        this.errorMessage = 'Failed to clear completed tasks';
-        // Revert the optimistic update on error
+        this.errorMessage = 'Failed to clear completed tasks: ' + (error?.message || 'unknown');
+
+        // Revert optimistic UI on error
         this.tasks = originalTasks;
         this.updateFilteredTasks();
       }
     });
   }
 }
-

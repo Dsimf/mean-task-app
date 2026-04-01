@@ -26,38 +26,42 @@
   </form>
 
   <div class="filters transition-all duration-300">
-    <button class="filter-btn transition-all duration-200 hover:scale-105" [class.active]="taskService.filter() === 'all'" (click)="setFilter('all')">
-      All <span class="count">{{ taskService.taskList().length }}</span>
+    <button class="filter-btn transition-all duration-200 hover:scale-105" [class.active]="currentFilter === 'all'" (click)="setFilter('all')">
+      All <span class="count">{{ tasks.length }}</span>
     </button>
-    <button class="filter-btn transition-all duration-200 hover:scale-105" [class.active]="taskService.filter() === 'active'" (click)="setFilter('active')">
-      Active <span class="count">{{ taskService.filteredTasks().filter(t => !t.completed).length }}</span>
+    <button class="filter-btn transition-all duration-200 hover:scale-105" [class.active]="currentFilter === 'active'" (click)="setFilter('active')">
+      Active <span class="count">{{ filteredTasks().filter(t => !t.completed).length }}</span>
     </button>
-    <button class="filter-btn transition-all duration-200 hover:scale-105" [class.active]="taskService.filter() === 'completed'" (click)="setFilter('completed')">
-      Completed <span class="count">{{ taskService.filteredTasks().filter(t => t.completed).length }}</span>
+    <button class="filter-btn transition-all duration-200 hover:scale-105" [class.active]="currentFilter === 'completed'" (click)="setFilter('completed')">
+      Completed <span class="count">{{ filteredTasks().filter(t => t.completed).length }}</span>
     </button>
   </div>
 
   <ul id="taskList" class="task-list">
-    <li *ngIf="taskService.filteredTasks().length === 0" class="empty-state animate-in fade-in">
+    <li *ngIf="filteredTasks().length === 0" class="empty-state animate-in fade-in">
       <p>✨ No tasks yet. Add one to get started! ✨</p>
     </li>
 
-    <li *ngFor="let task of taskService.filteredTasks(); let i = index" class="task-item transition-all duration-300 hover:scale-102 group" [class.completed]="task.completed" [class.priority-low]="task.priority === 'low'" [class.priority-med]="task.priority === 'med'" [class.priority-high]="task.priority === 'high'" [attr.data-priority]="task.priority" [style.animation-delay.ms]="i * 100">
-      <input type="checkbox" [checked]="task.completed" (change)="toggleComplete(task.id)" class="cb transition-all" />
+    <li *ngFor="let task of filteredTasks(); let i = index" class="task-item transition-all duration-300 hover:scale-102 group" [class.completed]="task.completed" [style.animation-delay.ms]="i * 100">
+      <input type="checkbox" [checked]="task.completed" (change)="toggleComplete(task)" class="cb transition-all" />
       <span class="task-text transition-all">{{ task.text }}</span>
-      <span class="priority-badge transition-all">{{ task.priority }}</span>
-      <button class="delete-btn transition-all duration-300 group-hover:scale-110" (click)="deleteTask(task.id)">×</button>
+      <button class="delete-btn transition-all duration-300 group-hover:scale-110" (click)="deleteTask(task)">×</button>
     </li>
   </ul>
 
   <div class="footer transition-all duration-300 sm:flex-row md:flex-wrap">
-    <span [class.high]="taskService.taskList().length > 10" id="taskCount" class="transition-all">
-      {{ taskService.taskList().length }} tasks
+    <span id="taskCount" class="transition-all">
+      {{ tasks.length }} tasks
     </span>
+
     <div class="flex gap-2 flex-wrap md:flex-nowrap">
-      <button id="clearCompleted" *ngIf="taskService.filteredTasks().some(t => t.completed)" class="transition-all duration-200 hover:scale-105" (click)="clearCompleted()">
-        Clear completed
+      <button
+        *ngIf="getCompletedCount() > 0"
+        class="clear-completed-btn transition-all duration-300 hover:scale-105"
+        (click)="clearCompleted()">
+        Clear completed ({{ getCompletedCount() }})
       </button>
+
       <button id="darkToggle" class="transition-all duration-200 hover:scale-105" (click)="toggleDarkMode()">
         {{ themeService.darkMode() ? '☀️ Light Mode' : '🌙 Dark Mode' }}
       </button>

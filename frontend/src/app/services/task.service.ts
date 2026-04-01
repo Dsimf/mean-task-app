@@ -1,145 +1,122 @@
-import { Injectable, signal, computed, PLATFORM_ID, inject } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
+import { Injectable } from '@angular/core';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { Observable, BehaviorSubject } from 'rxjs';
+import { tap, catchError, finalize } from 'rxjs/operators';
+import { throwError } from 'rxjs';
 
 export interface Task {
-  id: number;
+  _id?: string;           // MongoDB uses _id
+  id?: number;            // fallback for old tasks
   text: string;
   completed: boolean;
-  priority: 'low' | 'med' | 'high';
+  createdAt?: string;
 }
 
 @Injectable({
   providedIn: 'root'
 })
 export class TaskService {
-  private platformId = inject(PLATFORM_ID);
-  private tasks = signal<Task[]>([]);
-  private currentFilter = signal<'all' | 'active' | 'completed'>('all');
+  private apiUrl = 'http://localhost:3000/api/tasks';   // Backend URL
+  
+  // Loading and error state management
+  private loadingSubject = new BehaviorSubject<boolean>(false);
+  public loading$ = this.loadingSubject.asObservable();
+  
+  private errorSubject = new BehaviorSubject<string | null>(null);
+  public error$ = this.errorSubject.asObservable();
 
-  // Public signals for components to consume
-  public readonly taskList = this.tasks.asReadonly();
-  public readonly filter = this.currentFilter.asReadonly();
+  constructor(private http: HttpClient) {}
 
-  public readonly filteredTasks = computed(() => {
-    const filterType = this.currentFilter();
-    return this.tasks().filter(task => {
-      if (filterType === 'active') return !task.completed;
-      if (filterType === 'completed') return task.completed;
-      return true;
-    });
-  });
-
-  constructor() {
-    this.loadTasks();
-  }
-
-  /**
-   * Calculate priority based on text length
-   */
-  private getPriority(text: string): 'low' | 'med' | 'high' {
-    const length = text.length;
-    if (length < 30) return 'low';
-    if (length < 60) return 'med';
-    return 'high';
-  }
-
-  /**
-   * Load tasks from localStorage or fetch from API
-   */
-  async loadTasks(): Promise<void> {
-    if (!isPlatformBrowser(this.platformId)) return; // Skip on server
-    try {
-      const response = await fetch('https://jsonplaceholder.typicode.com/todos?_limit=5');
-      const fakeApiTasks = await response.json();
-
-      const apiTasks: Task[] = fakeApiTasks.map((todo: any) => ({
-        id: Date.now() + todo.id,
-        text: todo.title,
-        completed: todo.completed,
-        priority: this.getPriority(todo.title)
-      }));
-
-      const saved = localStorage.getItem('tasks');
-      this.tasks.set(saved ? JSON.parse(saved) : apiTasks);
-      console.log('%c✅ Tasks loaded from "API" + localStorage', 'color: #3498db; font-weight: bold');
-    } catch (error) {
-      console.error('API failed, using localStorage only');
-      const saved = localStorage.getItem('tasks');
-      this.tasks.set(saved ? JSON.parse(saved) : []);
-    }
-  }
-
-  /**
-   * Save tasks to localStorage
-   */
-  private saveTasks(): void {
-    if (isPlatformBrowser(this.platformId)) {
-      localStorage.setItem('tasks', JSON.stringify(this.tasks()));
-    }
-  }
-
-  /**
-   * Add a new task
-   */
-  addTask(text: string): void {
-    const trimmed = text.trim();
-    if (!trimmed) return;
-
-    const newTask: Task = {
-      id: Date.now(),
-      text: trimmed,
-      completed: false,
-      priority: this.getPriority(trimmed)
-    };
-
-    this.tasks.update(tasks => [...tasks, newTask]);
-    this.saveTasks();
-  }
-
-  /**
-   * Toggle task completion status
-   */
-  toggleTask(taskId: number): void {
-    this.tasks.update(tasks =>
-      tasks.map(t => t.id === taskId ? { ...t, completed: !t.completed } : t)
+  // GET all tasks from backend
+  getTasks(): Observable<Task[]> {
+    this.setLoading(true);
+    this.clearError();
+    return this.http.get<Task[]>(this.apiUrl).pipe(
+      tap(() => this.clearError()),
+      catchError(err => this.handleError(err)),
+      finalize(() => this.setLoading(false))
     );
-    this.saveTasks();
   }
 
-  /**
-   * Delete a task
-   */
-  deleteTask(taskId: number): void {
-    this.tasks.update(tasks => tasks.filter(t => t.id !== taskId));
-    this.saveTasks();
+  // POST new task
+  addTask(text: string): Observable<Task> {
+    this.setLoading(true);
+    this.clearError();
+    return this.http.post<Task>(this.apiUrl, { text }).pipe(
+      tap(() => this.clearError()),
+      catchError(err => this.handleError(err)),
+      finalize(() => this.setLoading(false))
+    );
   }
 
-  /**
-   * Clear all completed tasks
-   */
-  clearCompleted(): void {
-    this.tasks.update(tasks => tasks.filter(task => !task.completed));
-    this.saveTasks();
+  // PUT toggle complete (no loading state for optimistic updates)
+  toggleComplete(id: string): Observable<Task> {
+    this.clearError();
+    return this.http.put<Task>(`${this.apiUrl}/${id}`, {}).pipe(
+      tap(() => this.clearError()),
+      catchError(err => this.handleError(err))
+    );
   }
 
-  /**
-   * Set the current filter
-   */
-  setFilter(filter: 'all' | 'active' | 'completed'): void {
-    this.currentFilter.set(filter);
+  // DELETE task
+  deleteTask(id: string): Observable<any> {
+    this.setLoading(true);
+    this.clearError();
+    return this.http.delete(`${this.apiUrl}/${id}`).pipe(
+      tap(() => this.clearError()),
+      catchError(err => this.handleError(err)),
+      finalize(() => this.setLoading(false))
+    );
   }
 
-  /**
-   * Get all tasks (for debugging or exports)
-   */
-  getAllTasks(): Task[] {
-    return this.tasks();
+  // Search tasks locally
+  searchTasks(tasks: Task[], query: string): Task[] {
+    if (!query.trim()) {
+      return tasks;
+    }
+    const lowerQuery = query.toLowerCase();
+    return tasks.filter(task => task.text.toLowerCase().includes(lowerQuery));
   }
 
-  /**
-   * Get task count
-   */
-  getTaskCount(): number {
-    return this.tasks().length;
+  // Clear completed tasks
+  clearCompleted(): Observable<any> {
+    this.clearError();
+    return this.http.delete(`${this.apiUrl}/completed`).pipe(
+      tap(() => this.clearError()),
+      catchError(err => this.handleError(err))
+    );
+  }
+
+  // Error handling
+  private handleError(error: HttpErrorResponse) {
+    let errorMessage = 'An error occurred';
+    
+    if (error.error instanceof ErrorEvent) {
+      // Client-side error
+      errorMessage = `Error: ${error.error.message}`;
+    } else {
+      // Server-side error
+      errorMessage = `Error: ${error.status} - ${error.statusText}`;
+      if (error.error?.message) {
+        errorMessage = error.error.message;
+      }
+    }
+    
+    this.setError(errorMessage);
+    console.error('TaskService Error:', errorMessage);
+    return throwError(() => new Error(errorMessage));
+  }
+
+  // State management helpers
+  private setLoading(loading: boolean): void {
+    this.loadingSubject.next(loading);
+  }
+
+  private setError(error: string | null): void {
+    this.errorSubject.next(error);
+  }
+
+  private clearError(): void {
+    this.errorSubject.next(null);
   }
 }

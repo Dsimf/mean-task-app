@@ -63,6 +63,19 @@ app.put('/api/tasks/:id', async (req, res) => {
   }
 });
 
+// DELETE all completed tasks
+app.delete('/api/tasks/completed', async (req, res) => {
+  try {
+    const result = await Task.deleteMany({ completed: true });
+    res.json({ 
+      message: `${result.deletedCount} completed tasks deleted successfully`,
+      deletedCount: result.deletedCount
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error while deleting completed tasks' });
+  }
+});
+
 // DELETE task
 app.delete('/api/tasks/:id', async (req, res) => {
   try {
