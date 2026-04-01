@@ -1,4 +1,5 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, BehaviorSubject } from 'rxjs';
 import { tap, catchError, finalize } from 'rxjs/operators';
@@ -16,7 +17,7 @@ export interface Task {
   providedIn: 'root'
 })
 export class TaskService {
-  private apiUrl = 'https://taskflow-backend-hazw.onrender.com/api/tasks';   // Backend URL
+  private apiUrl = 'http://localhost:3000/api/tasks';   // Backend URL
   
   // Loading and error state management
   private loadingSubject = new BehaviorSubject<boolean>(false);
@@ -25,7 +26,7 @@ export class TaskService {
   private errorSubject = new BehaviorSubject<string | null>(null);
   public error$ = this.errorSubject.asObservable();
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, @Inject(PLATFORM_ID) private platformId: Object) {}
 
   // GET all tasks from backend
   getTasks(): Observable<Task[]> {
@@ -90,8 +91,8 @@ export class TaskService {
   // Error handling
   private handleError(error: HttpErrorResponse) {
     let errorMessage = 'An error occurred';
-    
-    if (error.error instanceof ErrorEvent) {
+
+    if (isPlatformBrowser(this.platformId) && error.error instanceof ErrorEvent) {
       // Client-side error
       errorMessage = `Error: ${error.error.message}`;
     } else {
@@ -101,7 +102,7 @@ export class TaskService {
         errorMessage = error.error.message;
       }
     }
-    
+
     this.setError(errorMessage);
     console.error('TaskService Error:', errorMessage);
     return throwError(() => new Error(errorMessage));
