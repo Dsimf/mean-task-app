@@ -12,7 +12,7 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:4200', 'https://Dsimf.github.io'], // Angular dev + GitHub Pages
+  origin: ['http://localhost:4200', 'https://Dsimf.github.io', 'https://taskflow-backend-hazw.onrender.com'], // Angular dev + GitHub Pages + Render
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type']
 }));

@@ -16,7 +16,7 @@ export interface Task {
   providedIn: 'root'
 })
 export class TaskService {
-  private apiUrl = 'http://localhost:3000/api/tasks';   // Backend URL
+  private apiUrl = 'https://taskflow-backend-hazw.onrender.com/api/tasks';   // Backend URL
   
   // Loading and error state management
   private loadingSubject = new BehaviorSubject<boolean>(false);
