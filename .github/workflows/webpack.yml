@@ -9,6 +9,9 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    # Required so GITHUB_TOKEN can push to gh-pages (default token is read-only).
+    permissions:
+      contents: write
 
     steps:
     - uses: actions/checkout@v4
