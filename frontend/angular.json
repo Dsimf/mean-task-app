@@ -64,7 +64,6 @@
           },
           "configurations": {
             "production": {
-              "baseHref": "/mean-task-app/",
               "budgets": [
                 {
                   "type": "initial",
