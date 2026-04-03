@@ -1,0 +1,12 @@
+# Dependencies — must not be in the repo (Jekyll/GitHub Pages scans tracked files on branch deploy).
+node_modules/
+
+# Frontend build output
+frontend/dist/
+
+# Environment & OS
+.env
+.env.*
+.DS_Store
+Thumbs.db
+*.log
